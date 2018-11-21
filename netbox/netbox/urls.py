@@ -1,25 +1,11 @@
 from django.conf import settings
 from django.conf.urls import include, url
 from django.views.static import serve
-from drf_yasg import openapi
-from drf_yasg.views import get_schema_view
+from rest_framework.documentation import include_docs_urls
 
 from netbox.views import APIRootView, HomeView, SearchView
 from users.views import LoginView, LogoutView
 from .admin import admin_site
-
-schema_view = get_schema_view(
-    openapi.Info(
-        title="NetBox API",
-        default_version='v2',
-        description="API to access NetBox",
-        terms_of_service="https://github.com/digitalocean/netbox",
-        contact=openapi.Contact(email="netbox@digitalocean.com"),
-        license=openapi.License(name="Apache v2 License"),
-    ),
-    validators=['flex', 'ssv'],
-    public=True,
-)
 
 _patterns = [
 
@@ -50,9 +36,7 @@ _patterns = [
     url(r'^api/secrets/', include('secrets.api.urls')),
     url(r'^api/tenancy/', include('tenancy.api.urls')),
     url(r'^api/virtualization/', include('virtualization.api.urls')),
-    url(r'^api/docs/$', schema_view.with_ui('swagger'), name='api_docs'),
-    url(r'^api/redoc/$', schema_view.with_ui('redoc'), name='api_redocs'),
-    url(r'^api/swagger(?P<format>.json|.yaml)$', schema_view.without_ui(), name='schema_swagger'),
+    url(r'^api/docs/', include_docs_urls(title='NetBox API', public=False)),
 
     # Serving static media in Django to pipe it through LoginRequiredMiddleware
     url(r'^media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),
