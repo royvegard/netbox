@@ -10,6 +10,7 @@ from rest_framework.exceptions import APIException
 from rest_framework.permissions import BasePermission
 from rest_framework.relations import PrimaryKeyRelatedField
 from rest_framework.response import Response
+from rest_framework.schemas.generators import SchemaGenerator
 from rest_framework.serializers import Field, ModelSerializer, ValidationError
 from rest_framework.viewsets import ModelViewSet as _ModelViewSet, ViewSet
 
@@ -254,3 +255,17 @@ class FieldChoicesViewSet(ViewSet):
 
     def get_view_name(self):
         return "Field Choices"
+
+
+#
+# Schema generators
+#
+
+class NestedRoutersSchemaGenerator(SchemaGenerator):
+
+    def get_links(self, request=None):
+        """
+        Extract the nested app link nodes from within the root API link node.
+        """
+        links = super(NestedRoutersSchemaGenerator, self).get_links(request)
+        return links['api']

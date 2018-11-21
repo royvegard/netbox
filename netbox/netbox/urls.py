@@ -5,6 +5,7 @@ from rest_framework.documentation import include_docs_urls
 
 from netbox.views import APIRootView, HomeView, SearchView
 from users.views import LoginView, LogoutView
+from utilities.api import NestedRoutersSchemaGenerator
 from .admin import admin_site
 
 _patterns = [
@@ -36,7 +37,9 @@ _patterns = [
     url(r'^api/secrets/', include('secrets.api.urls')),
     url(r'^api/tenancy/', include('tenancy.api.urls')),
     url(r'^api/virtualization/', include('virtualization.api.urls')),
-    url(r'^api/docs/', include_docs_urls(title='NetBox API', public=False)),
+    url(r'^api/docs/', include_docs_urls(
+        title='NetBox API', public=False, generator_class=NestedRoutersSchemaGenerator
+    )),
 
     # Serving static media in Django to pipe it through LoginRequiredMiddleware
     url(r'^media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),
