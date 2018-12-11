@@ -1,8 +1,4 @@
-v2.5-beta2 (FUTURE)
-
-## BETA RELEASE
-
-**This is a beta release.** It is intended solely for gathering community and developer feedback in preparation for the v2.5 release. Do not run it in production, and do not give it write access to your production database. As the database schema is subject to change during the beta period, a migration path to the stable release likely will not be provided. Do not commit any data which you are not willing to lose.
+v2.5.0 (2018-12-10)
 
 ## Notes
 
@@ -17,6 +13,10 @@ The UserAction model, which was deprecated by the new change logging feature in 
 ### View Permissions in Django 2.1
 
 Django 2.1 introduces view permissions for object types (not to be confused with object-level permissions). Implementation of [#323](https://github.com/digitalocean/netbox/issues/323) is planned for NetBox v2.6. Users are encourage to begin assigning view permissions as desired in preparation for their eventual enforcement.
+
+### upgrade.sh No Longer Invokes sudo
+
+The `upgrade.sh` script has been tweaked so that it no longer invokes `sudo` internally. This was done to ensure compatibility when running NetBox inside a Python virtual environment. If you need elevated permissions when upgrading NetBox, call the upgrade script with `sudo upgrade.sh`.
 
 ## New Features
 
@@ -38,28 +38,19 @@ NetBox now supports modeling physical cables for console, power, and interface c
 * [#2292](https://github.com/digitalocean/netbox/issues/2292) - Removed the deprecated UserAction model
 * [#2367](https://github.com/digitalocean/netbox/issues/2367) - Removed deprecated RPCClient functionality
 * [#2426](https://github.com/digitalocean/netbox/issues/2426) - Introduced `SESSION_FILE_PATH` configuration setting for authentication without write access to database
+* [#2594](https://github.com/digitalocean/netbox/issues/2594) - `upgrade.sh` no longer invokes sudo
 
-## Changes From v2.5-beta1
+## Changes From v2.5-beta2
 
-* [#2554](https://github.com/digitalocean/netbox/issues/2554) - Fix cable trace display when following a rear port with no cable attached
-* [#2563](https://github.com/digitalocean/netbox/issues/2563) - Enable export templates for cables
-* [#2566](https://github.com/digitalocean/netbox/issues/2566) - Prevent both ends of a cable from connecting to the same termination point
-* [#2567](https://github.com/digitalocean/netbox/issues/2567) - Introduced proxy models to represent console/power/interface connections
-* [#2569](https://github.com/digitalocean/netbox/issues/2569) - Added LSH fiber type; removed SC duplex/simplex designations
-* [#2570](https://github.com/digitalocean/netbox/issues/2570) - Add bulk disconnect view for front/rear pass-through ports
-* [#2571](https://github.com/digitalocean/netbox/issues/2571) - Enforce deletion of attached cable when deleting a termination point
-* [#2572](https://github.com/digitalocean/netbox/issues/2572) - Add button to disconnect cable from circuit termination
-* [#2573](https://github.com/digitalocean/netbox/issues/2573) - Fix bulk console/power/interface disconnections
-* [#2574](https://github.com/digitalocean/netbox/issues/2574) - Remove duplicate interface links from topology maps
-* [#2578](https://github.com/digitalocean/netbox/issues/2578) - Reorganized nested serializers
-* [#2579](https://github.com/digitalocean/netbox/issues/2579) - Add missing cable disconnect buttons for front/rear ports
-* [#2583](https://github.com/digitalocean/netbox/issues/2583) - Cleaned up component filters for device and device type
-* [#2584](https://github.com/digitalocean/netbox/issues/2584) - Prevent a Front port from being connected to its corresponding rear port
-* [#2585](https://github.com/digitalocean/netbox/issues/2585) - Prevent cable connections that include a virtual interface
-* [#2586](https://github.com/digitalocean/netbox/issues/2586) - Added tests for the Cable model's clean() method
-* [#2593](https://github.com/digitalocean/netbox/issues/2593) - Fix toggling of connected cable's status
-* [#2601](https://github.com/digitalocean/netbox/issues/2601) - Added a `description` field to pass-through ports
-* [#2602](https://github.com/digitalocean/netbox/issues/2602) - Return HTTP 204 when no new IPs/prefixes are available for provisioning
+* [#2474](https://github.com/digitalocean/netbox/issues/2474) - Add `cabled` and `connection_status` filters for device components
+* [#2616](https://github.com/digitalocean/netbox/issues/2616) - Convert Rack `outer_unit` and Cable `length_unit` to integer-based choice fields
+* [#2622](https://github.com/digitalocean/netbox/issues/2622) - Enable filtering cables by multiple types/colors
+* [#2624](https://github.com/digitalocean/netbox/issues/2624) - Delete associated content type and permissions when removing InterfaceConnection model
+* [#2626](https://github.com/digitalocean/netbox/issues/2626) - Remove extraneous permissions generated from proxy models
+* [#2632](https://github.com/digitalocean/netbox/issues/2632) - Change representation of null values from `0` to `null`
+* [#2639](https://github.com/digitalocean/netbox/issues/2639) - Fix preservation of length/dimensions unit for racks and cables
+* [#2648](https://github.com/digitalocean/netbox/issues/2648) - Include the `connection_status` field in nested represenations of connectable device components
+* [#2649](https://github.com/digitalocean/netbox/issues/2649) - Add `connected_endpoint_type` to connectable device component API representations
 
 ## API Changes
 
@@ -67,6 +58,8 @@ NetBox now supports modeling physical cables for console, power, and interface c
 * The `rpc_client` field has been removed from dcim.Platform (see #2367)
 * Introduced a new API endpoint for cables at `/dcim/cables/`
 * New endpoints for front and rear pass-through ports (and their templates) in parallel with existing device components
+* The fields `interface_connection` on Interface and `interface` on CircuitTermination have been replaced with `connected_endpoint` and `connection_status`
+* A new `cable` field has been added to console, power, and interface components and to circuit terminations
 * New fields for dcim.Rack: `status`, `asset_tag`, `outer_width`, `outer_depth`, `outer_unit`
 * The following boolean filters on dcim.Device and dcim.DeviceType have been renamed:
     * `is_console_server`: `console_server_ports`
@@ -80,6 +73,28 @@ NetBox now supports modeling physical cables for console, power, and interface c
 * Added a `description` field to the CircuitTermination serializer
 * Added `ipaddress_count` to InterfaceSerializer to show the count of assigned IP addresses for each interface
 * The `available-prefixes` and `available-ips` IPAM endpoints now return an HTTP 204 response instead of HTTP 400 when no new objects can be created
+* Filtering on null values now uses the string `null` instead of zero
+
+---
+
+v2.4.9 (2018-12-07)
+
+## Enhancements
+
+* [#2089](https://github.com/digitalocean/netbox/issues/2089) - Add SONET interface form factors
+* [#2495](https://github.com/digitalocean/netbox/issues/2495) - Enable deep-merging of config context data
+* [#2597](https://github.com/digitalocean/netbox/issues/2597) - Add FibreChannel SFP28 (32GFC) interface form factor
+
+## Bug Fixes
+
+* [#2400](https://github.com/digitalocean/netbox/issues/2400) - Correct representation of nested object assignment in API docs
+* [#2576](https://github.com/digitalocean/netbox/issues/2576) - Correct type for count_* fields in site API representation
+* [#2606](https://github.com/digitalocean/netbox/issues/2606) - Fixed filtering for interfaces with a virtual form factor
+* [#2611](https://github.com/digitalocean/netbox/issues/2611) - Fix error handling when assigning a clustered device to a different site
+* [#2613](https://github.com/digitalocean/netbox/issues/2613) - Decrease live search minimum characters to three
+* [#2615](https://github.com/digitalocean/netbox/issues/2615) - Tweak live search widget to use brief format for API requests
+* [#2623](https://github.com/digitalocean/netbox/issues/2623) - Removed the need to pass the model class to the rqworker process for webhooks
+* [#2634](https://github.com/digitalocean/netbox/issues/2634) - Enforce consistent representation of unnamed devices in rack view
 
 ---
 

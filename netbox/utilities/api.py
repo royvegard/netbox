@@ -67,20 +67,29 @@ class ChoiceField(Field):
                     self._choices[k2] = v2
             else:
                 self._choices[k] = v
-        super(ChoiceField, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
     def to_representation(self, obj):
         if obj is '':
             return None
-        return {'value': obj, 'label': self._choices[obj]}
+        data = OrderedDict([
+            ('value', obj),
+            ('label', self._choices[obj])
+        ])
+        return data
 
     def to_internal_value(self, data):
-        # Hotwiring boolean values
         if hasattr(data, 'lower'):
+            # Hotwiring boolean values from string
             if data.lower() == 'true':
                 return True
             if data.lower() == 'false':
                 return False
+            # Check for string representation of an integer (e.g. "123")
+            try:
+                data = int(data)
+            except ValueError:
+                pass
         return data
 
 
@@ -122,7 +131,7 @@ class SerializedPKRelatedField(PrimaryKeyRelatedField):
     def __init__(self, serializer, **kwargs):
         self.serializer = serializer
         self.pk_field = kwargs.pop('pk_field', None)
-        super(SerializedPKRelatedField, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
     def to_representation(self, value):
         return self.serializer(value, context={'request': self.context['request']}).data
@@ -198,7 +207,7 @@ class ModelViewSet(_ModelViewSet):
         if isinstance(kwargs.get('data', {}), list):
             kwargs['many'] = True
 
-        return super(ModelViewSet, self).get_serializer(*args, **kwargs)
+        return super().get_serializer(*args, **kwargs)
 
     def get_serializer_class(self):
 
@@ -222,7 +231,7 @@ class FieldChoicesViewSet(ViewSet):
     fields = []
 
     def __init__(self, *args, **kwargs):
-        super(FieldChoicesViewSet, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
         # Compile a dict of all fields in this view
         self._fields = OrderedDict()

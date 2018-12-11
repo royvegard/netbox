@@ -23,8 +23,17 @@ from .nested_serializers import *
 
 
 class ConnectedEndpointSerializer(ValidatedModelSerializer):
+    connected_endpoint_type = serializers.SerializerMethodField(read_only=True)
     connected_endpoint = serializers.SerializerMethodField(read_only=True)
     connection_status = ChoiceField(choices=CONNECTION_STATUS_CHOICES, read_only=True)
+
+    def get_connected_endpoint_type(self, obj):
+        if hasattr(obj, 'connected_endpoint') and obj.connected_endpoint is not None:
+            return '{}.{}'.format(
+                obj.connected_endpoint._meta.app_label,
+                obj.connected_endpoint._meta.model_name
+            )
+        return None
 
     def get_connected_endpoint(self, obj):
         """
@@ -58,6 +67,11 @@ class SiteSerializer(TaggitSerializer, CustomFieldModelSerializer):
     tenant = NestedTenantSerializer(required=False, allow_null=True)
     time_zone = TimeZoneField(required=False)
     tags = TagListSerializerField(required=False)
+    count_prefixes = serializers.IntegerField(read_only=True)
+    count_vlans = serializers.IntegerField(read_only=True)
+    count_racks = serializers.IntegerField(read_only=True)
+    count_devices = serializers.IntegerField(read_only=True)
+    count_circuits = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = Site
@@ -121,7 +135,7 @@ class RackSerializer(TaggitSerializer, CustomFieldModelSerializer):
             validator(data)
 
         # Enforce model validation
-        super(RackSerializer, self).validate(data)
+        super().validate(data)
 
         return data
 
@@ -294,7 +308,7 @@ class DeviceSerializer(TaggitSerializer, CustomFieldModelSerializer):
             validator(data)
 
         # Enforce model validation
-        super(DeviceSerializer, self).validate(data)
+        super().validate(data)
 
         return data
 
@@ -331,7 +345,10 @@ class ConsoleServerPortSerializer(TaggitSerializer, ConnectedEndpointSerializer)
 
     class Meta:
         model = ConsoleServerPort
-        fields = ['id', 'device', 'name', 'connected_endpoint', 'connection_status', 'cable', 'tags']
+        fields = [
+            'id', 'device', 'name', 'connected_endpoint_type', 'connected_endpoint', 'connection_status', 'cable',
+            'tags',
+        ]
 
 
 class ConsolePortSerializer(TaggitSerializer, ConnectedEndpointSerializer):
@@ -341,7 +358,10 @@ class ConsolePortSerializer(TaggitSerializer, ConnectedEndpointSerializer):
 
     class Meta:
         model = ConsolePort
-        fields = ['id', 'device', 'name', 'connected_endpoint', 'connection_status', 'cable', 'tags']
+        fields = [
+            'id', 'device', 'name', 'connected_endpoint_type', 'connected_endpoint', 'connection_status', 'cable',
+            'tags',
+        ]
 
 
 class PowerOutletSerializer(TaggitSerializer, ConnectedEndpointSerializer):
@@ -351,7 +371,10 @@ class PowerOutletSerializer(TaggitSerializer, ConnectedEndpointSerializer):
 
     class Meta:
         model = PowerOutlet
-        fields = ['id', 'device', 'name', 'connected_endpoint', 'connection_status', 'cable', 'tags']
+        fields = [
+            'id', 'device', 'name', 'connected_endpoint_type', 'connected_endpoint', 'connection_status', 'cable',
+            'tags',
+        ]
 
 
 class PowerPortSerializer(TaggitSerializer, ConnectedEndpointSerializer):
@@ -361,7 +384,10 @@ class PowerPortSerializer(TaggitSerializer, ConnectedEndpointSerializer):
 
     class Meta:
         model = PowerPort
-        fields = ['id', 'device', 'name', 'connected_endpoint', 'connection_status', 'cable', 'tags']
+        fields = [
+            'id', 'device', 'name', 'connected_endpoint_type', 'connected_endpoint', 'connection_status', 'cable',
+            'tags',
+        ]
 
 
 class InterfaceSerializer(TaggitSerializer, ConnectedEndpointSerializer):
@@ -383,8 +409,8 @@ class InterfaceSerializer(TaggitSerializer, ConnectedEndpointSerializer):
         model = Interface
         fields = [
             'id', 'device', 'name', 'form_factor', 'enabled', 'lag', 'mtu', 'mac_address', 'mgmt_only', 'description',
-            'connected_endpoint', 'connection_status', 'cable', 'mode', 'untagged_vlan', 'tagged_vlans', 'tags',
-            'count_ipaddresses',
+            'connected_endpoint_type', 'connected_endpoint', 'connection_status', 'cable', 'mode', 'untagged_vlan',
+            'tagged_vlans', 'tags', 'count_ipaddresses',
         ]
 
     # TODO: This validation should be handled by Interface.clean()
@@ -405,7 +431,7 @@ class InterfaceSerializer(TaggitSerializer, ConnectedEndpointSerializer):
                                     "be global.".format(vlan)
                 })
 
-        return super(InterfaceSerializer, self).validate(data)
+        return super().validate(data)
 
 
 class RearPortSerializer(ValidatedModelSerializer):

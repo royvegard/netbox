@@ -7,6 +7,7 @@ from netaddr.core import AddrFormatError
 
 from extras.filters import CustomFieldFilterSet
 from tenancy.models import Tenant
+from utilities.constants import COLOR_CHOICES
 from utilities.filters import NullableCharFieldFilter, NumericInFilter, TagFilter
 from virtualization.models import Cluster
 from .constants import *
@@ -698,37 +699,56 @@ class DeviceComponentFilterSet(django_filters.FilterSet):
 
 
 class ConsolePortFilter(DeviceComponentFilterSet):
+    cabled = django_filters.BooleanFilter(
+        field_name='cable',
+        lookup_expr='isnull',
+        exclude=True
+    )
 
     class Meta:
         model = ConsolePort
-        fields = ['name']
+        fields = ['name', 'connection_status']
 
 
 class ConsoleServerPortFilter(DeviceComponentFilterSet):
+    cabled = django_filters.BooleanFilter(
+        field_name='cable',
+        lookup_expr='isnull',
+        exclude=True
+    )
 
     class Meta:
         model = ConsoleServerPort
-        fields = ['name']
+        fields = ['name', 'connection_status']
 
 
 class PowerPortFilter(DeviceComponentFilterSet):
+    cabled = django_filters.BooleanFilter(
+        field_name='cable',
+        lookup_expr='isnull',
+        exclude=True
+    )
 
     class Meta:
         model = PowerPort
-        fields = ['name']
+        fields = ['name', 'connection_status']
 
 
 class PowerOutletFilter(DeviceComponentFilterSet):
+    cabled = django_filters.BooleanFilter(
+        field_name='cable',
+        lookup_expr='isnull',
+        exclude=True
+    )
 
     class Meta:
         model = PowerOutlet
-        fields = ['name']
+        fields = ['name', 'connection_status']
 
 
 class InterfaceFilter(django_filters.FilterSet):
     """
-    Not using DeviceComponentFilterSet for Interfaces because we need to glean the ordering logic from the parent
-    Device's DeviceType.
+    Not using DeviceComponentFilterSet for Interfaces because we need to check for VirtualChassis membership.
     """
     device = django_filters.CharFilter(
         method='filter_device',
@@ -739,6 +759,11 @@ class InterfaceFilter(django_filters.FilterSet):
         method='filter_device',
         field_name='pk',
         label='Device (ID)',
+    )
+    cabled = django_filters.BooleanFilter(
+        field_name='cable',
+        lookup_expr='isnull',
+        exclude=True
     )
     type = django_filters.CharFilter(
         method='filter_type',
@@ -762,15 +787,19 @@ class InterfaceFilter(django_filters.FilterSet):
         method='filter_vlan',
         label='Assigned VID'
     )
+    form_factor = django_filters.MultipleChoiceFilter(
+        choices=IFACE_FF_CHOICES,
+        null_value=None
+    )
 
     class Meta:
         model = Interface
-        fields = ['name', 'form_factor', 'enabled', 'mtu', 'mgmt_only']
+        fields = ['name', 'connection_status', 'form_factor', 'enabled', 'mtu', 'mgmt_only']
 
     def filter_device(self, queryset, name, value):
         try:
             device = Device.objects.get(**{name: value})
-            vc_interface_ids = [i['id'] for i in device.vc_interfaces.values('id')]
+            vc_interface_ids = device.vc_interfaces.values_list('id', flat=True)
             return queryset.filter(pk__in=vc_interface_ids)
         except Device.DoesNotExist:
             return queryset.none()
@@ -814,6 +843,11 @@ class InterfaceFilter(django_filters.FilterSet):
 
 
 class FrontPortFilter(DeviceComponentFilterSet):
+    cabled = django_filters.BooleanFilter(
+        field_name='cable',
+        lookup_expr='isnull',
+        exclude=True
+    )
 
     class Meta:
         model = FrontPort
@@ -821,6 +855,11 @@ class FrontPortFilter(DeviceComponentFilterSet):
 
 
 class RearPortFilter(DeviceComponentFilterSet):
+    cabled = django_filters.BooleanFilter(
+        field_name='cable',
+        lookup_expr='isnull',
+        exclude=True
+    )
 
     class Meta:
         model = RearPort
@@ -928,6 +967,12 @@ class CableFilter(django_filters.FilterSet):
     q = django_filters.CharFilter(
         method='search',
         label='Search',
+    )
+    type = django_filters.MultipleChoiceFilter(
+        choices=CABLE_TYPE_CHOICES
+    )
+    color = django_filters.MultipleChoiceFilter(
+        choices=COLOR_CHOICES
     )
 
     class Meta:

@@ -46,6 +46,9 @@ def console_connections_to_cables(apps, schema_editor):
     if 'test' not in sys.argv:
         print("{} cables created".format(cable_count))
 
+    # Normalize connection_status for all non-connected ConsolePorts
+    ConsolePort.objects.filter(connected_endpoint__isnull=True).update(connection_status=None)
+
 
 def power_connections_to_cables(apps, schema_editor):
     """
@@ -86,6 +89,9 @@ def power_connections_to_cables(apps, schema_editor):
     cable_count = Cable.objects.filter(termination_a_type=powerport_type).count()
     if 'test' not in sys.argv:
         print("{} cables created".format(cable_count))
+
+    # Normalize connection_status for all non-connected PowerPorts
+    PowerPort.objects.filter(connected_endpoint__isnull=True).update(connection_status=None)
 
 
 def interface_connections_to_cables(apps, schema_editor):
@@ -131,6 +137,15 @@ def interface_connections_to_cables(apps, schema_editor):
         print("{} cables created".format(cable_count))
 
 
+def delete_interfaceconnection_content_type(apps, schema_editor):
+    """
+    Delete the ContentType for the InterfaceConnection model. (This is not done automatically upon model deletion.)
+    """
+    ContentType = apps.get_model('contenttypes', 'ContentType')
+    InterfaceConnection = apps.get_model('dcim', 'InterfaceConnection')
+    ContentType.objects.get_for_model(InterfaceConnection).delete()
+
+
 class Migration(migrations.Migration):
     atomic = False
 
@@ -157,7 +172,7 @@ class Migration(migrations.Migration):
                 ('label', models.CharField(blank=True, max_length=100)),
                 ('color', utilities.fields.ColorField(blank=True, max_length=6)),
                 ('length', models.PositiveSmallIntegerField(blank=True, null=True)),
-                ('length_unit', models.CharField(blank=True, max_length=2)),
+                ('length_unit', models.PositiveSmallIntegerField(blank=True, null=True)),
                 ('_abs_length', models.DecimalField(blank=True, decimal_places=4, max_digits=10, null=True)),
                 ('termination_a_type', models.ForeignKey(limit_choices_to={'model__in': ['consoleport', 'consoleserverport', 'interface', 'poweroutlet', 'powerport', 'frontport', 'rearport']}, on_delete=django.db.models.deletion.PROTECT, related_name='+', to='contenttypes.ContentType')),
                 ('termination_b_type', models.ForeignKey(limit_choices_to={'model__in': ['consoleport', 'consoleserverport', 'interface', 'poweroutlet', 'powerport', 'frontport', 'rearport']}, on_delete=django.db.models.deletion.PROTECT, related_name='+', to='contenttypes.ContentType')),
@@ -291,7 +306,8 @@ class Migration(migrations.Migration):
         migrations.RunPython(power_connections_to_cables),
         migrations.RunPython(interface_connections_to_cables),
 
-        # Delete the InterfaceConnection model
+        # Delete the InterfaceConnection model and its ContentType
+        migrations.RunPython(delete_interfaceconnection_content_type),
         migrations.RemoveField(
             model_name='interfaceconnection',
             name='interface_a',
@@ -302,37 +318,5 @@ class Migration(migrations.Migration):
         ),
         migrations.DeleteModel(
             name='InterfaceConnection',
-        ),
-
-        # Proxy models
-        migrations.CreateModel(
-            name='ConsoleConnection',
-            fields=[
-            ],
-            options={
-                'proxy': True,
-                'indexes': [],
-            },
-            bases=('dcim.consoleport',),
-        ),
-        migrations.CreateModel(
-            name='InterfaceConnection',
-            fields=[
-            ],
-            options={
-                'proxy': True,
-                'indexes': [],
-            },
-            bases=('dcim.interface',),
-        ),
-        migrations.CreateModel(
-            name='PowerConnection',
-            fields=[
-            ],
-            options={
-                'proxy': True,
-                'indexes': [],
-            },
-            bases=('dcim.powerport',),
         ),
     ]

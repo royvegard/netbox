@@ -1,8 +1,9 @@
+from collections import OrderedDict
+
 import datetime
 import json
 
 from django.core.serializers import serialize
-from django.http import HttpResponse
 
 from dcim.constants import LENGTH_UNIT_CENTIMETER, LENGTH_UNIT_FOOT, LENGTH_UNIT_INCH, LENGTH_UNIT_METER
 
@@ -34,32 +35,6 @@ def csv_format(data):
             csv.append('{}'.format(value))
 
     return ','.join(csv)
-
-
-def queryset_to_csv(queryset):
-    """
-    Export a queryset of objects as CSV, using the model's to_csv() method.
-    """
-    output = []
-
-    # Start with the column headers
-    headers = ','.join(queryset.model.csv_headers)
-    output.append(headers)
-
-    # Iterate through the queryset
-    for obj in queryset:
-        data = csv_format(obj.to_csv())
-        output.append(data)
-
-    # Build the HTTP response
-    response = HttpResponse(
-        '\n'.join(output),
-        content_type='text/csv'
-    )
-    filename = 'netbox_{}.csv'.format(queryset.model._meta.verbose_name_plural)
-    response['Content-Disposition'] = 'attachment; filename="{}"'.format(filename)
-
-    return response
 
 
 def foreground_color(bg_color):
@@ -108,6 +83,19 @@ def serialize_object(obj, extra=None):
         data.update(extra)
 
     return data
+
+
+def deepmerge(original, new):
+    """
+    Deep merge two dictionaries (new into original) and return a new dict
+    """
+    merged = OrderedDict(original)
+    for key, val in new.items():
+        if key in original and isinstance(original[key], dict) and isinstance(val, dict):
+            merged[key] = deepmerge(original[key], val)
+        else:
+            merged[key] = val
+    return merged
 
 
 def to_meters(length, unit):

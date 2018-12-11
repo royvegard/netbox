@@ -7,7 +7,7 @@ import warnings
 from django.contrib.messages import constants as messages
 from django.core.exceptions import ImproperlyConfigured
 
-# Check for Python 3.5+
+# Django 2.1 requires Python 3.5+
 if sys.version_info < (3, 5):
     raise RuntimeError(
         "NetBox requires Python 3.5 or higher (current: Python {})".format(sys.version.split()[0])
@@ -21,7 +21,8 @@ except ImportError:
         "Configuration file is not present. Please define netbox/netbox/configuration.py per the documentation."
     )
 
-VERSION = '2.5-beta1'
+
+VERSION = '2.5.1-dev'
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -247,7 +248,7 @@ SECRETS_MIN_PUBKEY_SIZE = 2048
 
 # Django filters
 FILTERS_NULL_CHOICE_LABEL = 'None'
-FILTERS_NULL_CHOICE_VALUE = '0'  # Must be a string
+FILTERS_NULL_CHOICE_VALUE = 'null'
 
 # Django REST framework (API)
 REST_FRAMEWORK_VERSION = VERSION[0:3]  # Use major.minor as API version
@@ -287,9 +288,12 @@ RQ_QUEUES = {
 
 # drf_yasg settings for Swagger
 SWAGGER_SETTINGS = {
+    'DEFAULT_AUTO_SCHEMA_CLASS': 'utilities.custom_inspectors.NetBoxSwaggerAutoSchema',
     'DEFAULT_FIELD_INSPECTORS': [
         'utilities.custom_inspectors.NullableBooleanFieldInspector',
         'utilities.custom_inspectors.CustomChoiceFieldInspector',
+        'utilities.custom_inspectors.TagListFieldInspector',
+        'utilities.custom_inspectors.SerializedPKRelatedFieldInspector',
         'drf_yasg.inspectors.CamelCaseJSONFilter',
         'drf_yasg.inspectors.ReferencingSerializerInspector',
         'drf_yasg.inspectors.RelatedFieldInspector',

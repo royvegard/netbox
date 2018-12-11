@@ -14,7 +14,7 @@ from django.template import Template, Context
 from django.urls import reverse
 
 from dcim.constants import CONNECTION_STATUS_CONNECTED
-from utilities.utils import foreground_color
+from utilities.utils import deepmerge, foreground_color
 from .constants import *
 from .querysets import ConfigContextQuerySet
 
@@ -261,7 +261,7 @@ class CustomFieldValue(models.Model):
         if self.pk and self.value is None:
             self.delete()
         else:
-            super(CustomFieldValue, self).save(*args, **kwargs)
+            super().save(*args, **kwargs)
 
 
 class CustomFieldChoice(models.Model):
@@ -293,7 +293,7 @@ class CustomFieldChoice(models.Model):
     def delete(self, using=None, keep_parents=False):
         # When deleting a CustomFieldChoice, delete all CustomFieldValues which point to it
         pk = self.pk
-        super(CustomFieldChoice, self).delete(using, keep_parents)
+        super().delete(using, keep_parents)
         CustomFieldValue.objects.filter(field__type=CF_TYPE_SELECT, serialized_value=str(pk)).delete()
 
 
@@ -603,7 +603,7 @@ class ImageAttachment(models.Model):
 
         _name = self.image.name
 
-        super(ImageAttachment, self).delete(*args, **kwargs)
+        super().delete(*args, **kwargs)
 
         # Delete file from disk
         self.image.delete(save=False)
@@ -717,11 +717,11 @@ class ConfigContextModel(models.Model):
         # Compile all config data, overwriting lower-weight values with higher-weight values where a collision occurs
         data = OrderedDict()
         for context in ConfigContext.objects.get_for_object(self):
-            data.update(context.data)
+            data = deepmerge(data, context.data)
 
-        # If the object has local config context data defined, that data overwrites all rendered data
+        # If the object has local config context data defined, merge it last
         if self.local_context_data is not None:
-            data.update(self.local_context_data)
+            data = deepmerge(data, self.local_context_data)
 
         return data
 
@@ -841,7 +841,7 @@ class ObjectChange(models.Model):
         self.user_name = self.user.username
         self.object_repr = str(self.changed_object)
 
-        return super(ObjectChange, self).save(*args, **kwargs)
+        return super().save(*args, **kwargs)
 
     def get_absolute_url(self):
         return reverse('extras:objectchange', args=[self.pk])

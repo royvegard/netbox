@@ -511,10 +511,10 @@ class Rack(ChangeLoggedModel, CustomFieldModel):
         blank=True,
         null=True
     )
-    outer_unit = models.CharField(
+    outer_unit = models.PositiveSmallIntegerField(
         choices=RACK_DIMENSION_UNIT_CHOICES,
-        max_length=2,
-        blank=True
+        blank=True,
+        null=True
     )
     comments = models.TextField(
         blank=True
@@ -544,7 +544,7 @@ class Rack(ChangeLoggedModel, CustomFieldModel):
         ]
 
     def __str__(self):
-        return self.display_name or super(Rack, self).__str__()
+        return self.display_name or super().__str__()
 
     def get_absolute_url(self):
         return reverse('dcim:rack', args=[self.pk])
@@ -552,12 +552,10 @@ class Rack(ChangeLoggedModel, CustomFieldModel):
     def clean(self):
 
         # Validate outer dimensions and unit
-        if self.outer_width and not self.outer_unit:
-            raise ValidationError("Must specify a unit when setting an outer width")
-        if self.outer_depth and not self.outer_unit:
-            raise ValidationError("Must specify a unit when setting an outer depth")
-        if self.outer_unit and self.outer_width is None and self.outer_depth is None:
-            self.length_unit = ''
+        if (self.outer_width is not None or self.outer_depth is not None) and self.outer_unit is None:
+            raise ValidationError("Must specify a unit when setting an outer width/depth")
+        elif self.outer_width is None and self.outer_depth is None:
+            self.outer_unit = None
 
         if self.pk:
             # Validate that Rack is tall enough to house the installed Devices
@@ -584,7 +582,7 @@ class Rack(ChangeLoggedModel, CustomFieldModel):
         if self.pk:
             _site_id = Rack.objects.get(pk=self.pk).site_id
 
-        super(Rack, self).save(*args, **kwargs)
+        super().save(*args, **kwargs)
 
         # Update racked devices if the assigned Site has been changed.
         if _site_id is not None and self.site_id != _site_id:
@@ -896,7 +894,7 @@ class DeviceType(ChangeLoggedModel, CustomFieldModel):
         return self.model
 
     def __init__(self, *args, **kwargs):
-        super(DeviceType, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
         # Save a copy of u_height for validation in clean()
         self._original_u_height = self.u_height
@@ -1439,7 +1437,7 @@ class Device(ChangeLoggedModel, ConfigContextModel, CustomFieldModel):
         )
 
     def __str__(self):
-        return self.display_name or super(Device, self).__str__()
+        return self.display_name or super().__str__()
 
     def get_absolute_url(self):
         return reverse('dcim:device', args=[self.pk])
@@ -1554,7 +1552,7 @@ class Device(ChangeLoggedModel, ConfigContextModel, CustomFieldModel):
 
         is_new = not bool(self.pk)
 
-        super(Device, self).save(*args, **kwargs)
+        super().save(*args, **kwargs)
 
         # If this is a new Device, instantiate all of the related components per the DeviceType definition
         if is_new:
@@ -2057,7 +2055,7 @@ class Interface(CableTermination, ComponentModel):
         if self.pk and self.mode is not IFACE_MODE_TAGGED:
             self.tagged_vlans.clear()
 
-        return super(Interface, self).save(*args, **kwargs)
+        return super().save(*args, **kwargs)
 
     def log_change(self, user, request_id, action):
         """
@@ -2497,10 +2495,10 @@ class Cable(ChangeLoggedModel):
         blank=True,
         null=True
     )
-    length_unit = models.CharField(
+    length_unit = models.PositiveSmallIntegerField(
         choices=CABLE_LENGTH_UNIT_CHOICES,
-        max_length=2,
-        blank=True
+        blank=True,
+        null=True
     )
     # Stores the normalized length (in meters) for database ordering
     _abs_length = models.DecimalField(
@@ -2524,7 +2522,7 @@ class Cable(ChangeLoggedModel):
 
     def __init__(self, *args, **kwargs):
 
-        super(Cable, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
         # Create an ID string for use by __str__(). We have to save a copy of pk since it's nullified after .delete()
         # is called.
@@ -2586,10 +2584,10 @@ class Cable(ChangeLoggedModel):
             raise ValidationError("Cannot connect to a virtual interface")
 
         # Validate length and length_unit
-        if self.length and not self.length_unit:
+        if self.length is not None and self.length_unit is None:
             raise ValidationError("Must specify a unit when setting a cable length")
-        if self.length_unit and self.length is None:
-            self.length_unit = ''
+        elif self.length is None:
+            self.length_unit = None
 
     def save(self, *args, **kwargs):
 
@@ -2597,7 +2595,7 @@ class Cable(ChangeLoggedModel):
         if self.length and self.length_unit:
             self._abs_length = to_meters(self.length, self.length_unit)
 
-        super(Cable, self).save(*args, **kwargs)
+        super().save(*args, **kwargs)
 
     def to_csv(self):
         return (
@@ -2633,64 +2631,3 @@ class Cable(ChangeLoggedModel):
 
         # (A path end, B path end, connected/planned)
         return a_path[-1][2], b_path[-1][2], path_status
-
-
-#
-# Connection proxy models
-#
-
-class ConsoleConnection(ConsolePort):
-
-    csv_headers = [
-        'console_server', 'port', 'device', 'console_port', 'connection_status',
-    ]
-
-    class Meta:
-        proxy = True
-
-    def to_csv(self):
-        return (
-            self.connected_endpoint.device.identifier if self.connected_endpoint else None,
-            self.connected_endpoint.name if self.connected_endpoint else None,
-            self.device.identifier,
-            self.name,
-            self.get_connection_status_display(),
-        )
-
-
-class PowerConnection(PowerPort):
-
-    csv_headers = [
-        'pdu', 'outlet', 'device', 'power_port', 'connection_status',
-    ]
-
-    class Meta:
-        proxy = True
-
-    def to_csv(self):
-        return (
-            self.connected_endpoint.device.identifier if self.connected_endpoint else None,
-            self.connected_endpoint.name if self.connected_endpoint else None,
-            self.device.identifier,
-            self.name,
-            self.get_connection_status_display(),
-        )
-
-
-class InterfaceConnection(Interface):
-
-    csv_headers = [
-        'device_a', 'interface_a', 'device_b', 'interface_b', 'connection_status',
-    ]
-
-    class Meta:
-        proxy = True
-
-    def to_csv(self):
-        return (
-            self.connected_endpoint.device.identifier if self.connected_endpoint else None,
-            self.connected_endpoint.name if self.connected_endpoint else None,
-            self.device.identifier,
-            self.name,
-            self.get_connection_status_display(),
-        )
