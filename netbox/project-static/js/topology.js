@@ -8,12 +8,10 @@ var options = {
     // default node style
     nodes: {
         shape: 'box',
-        // brokenImage: TOPOLOGY_IMG_DIR + 'role-unknown.png',
-        // size: 35,
-        font: { 
+        font: {
             multi: 'md',
             face: 'helvetica',
-        }, 
+        },
     },
     // default edge style
     edges: {
@@ -28,7 +26,6 @@ var options = {
     },
     manipulation: {
         enabled: false
-        // addEdge: addEdge,
     },
 };
 
@@ -62,7 +59,7 @@ api_call("/static/js/topology_config.json", "GET", undefined, function(config) {
            role_colors[device_role.id] = device_role.color;
        });
     });
-           
+
     // load devices
     api_call("/api/dcim/devices/?limit=0&site="+SITE_SLUG, "GET", undefined, function(response) {
        $.each(response.results, function(index, device) {
@@ -71,9 +68,9 @@ api_call("/static/js/topology_config.json", "GET", undefined, function(config) {
                return undefined;
            }
            var node = {
-               id: device.id, 
+               id: device.id,
                name: device.name,
-               label: '*'+device.name+'*\n'+device.device_type.model, 
+               label: '*'+device.name+'*\n'+device.device_type.model,
                color: '#'+role_colors[device.device_role.id],
                title: device.device_role.name+'<br>'
                    +device.name+'<br>'
@@ -111,8 +108,8 @@ api_call("/static/js/topology_config.json", "GET", undefined, function(config) {
                edges.add({
                    id: connection.id,
                    label: connection.label,
-                   from: connection.termination_a.device.id, 
-                   to: connection.termination_b.device.id, 
+                   from: connection.termination_a.device.id,
+                   to: connection.termination_b.device.id,
                    dashes: !connection.status.value,
                    color: {color: color, highlight: color, hover: color},
                    title: 'Connection between<br>'
@@ -209,7 +206,7 @@ function addEdge(edgeData,callback) {
                     api_call("/api/dcim/interface-connections/", "POST", data, function(response, status){
                         // only draw edge if API call was successful
                         var color = get_connection_color(
-                            $('#device_a_interfaces  option:selected').attr('form_factor'), 
+                            $('#device_a_interfaces  option:selected').attr('form_factor'),
                             $('#device_b_interfaces  option:selected').attr('form_factor')
                         );
                         edgeData.id = response.id;
