@@ -1,1 +1,7 @@
-../../static/js/topology_config.json
+{
+    "hidden_roles": [
+        "server",
+        "console-server",
+        "pdu"
+    ]
+}
